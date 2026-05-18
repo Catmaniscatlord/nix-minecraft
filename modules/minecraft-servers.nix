@@ -325,6 +325,10 @@ in
                 just does not generate the service file.
               '';
 
+              dataDir =
+                mkOpt' types.path cfg.dataDir
+                  "Directory to store the Minecraft server. If null, will default to the dataDir specified in the config";
+
               autoStart = mkBoolOpt' true ''
                 Whether to start this server on boot.
                 If set to <literal>false</literal>, can still be started with
@@ -672,9 +676,13 @@ in
         }
         {
           assertion =
-            config.services.minecraft-server.enable -> cfg.dataDir != config.services.minecraft-server.dataDir;
+            let
+              dataDirs = mapAttrsToList (name: conf: conf.dataDir) servers;
+            in
+            config.services.minecraft-server.enable
+            -> lib.all (dir: dir != config.services.minecraft-server.dataDir) dataDirs;
           message =
-            "`services.minecraft-servers.dataDir` and `services.minecraft-server.dataDir` conflict."
+            "`services.minecraft-servers.dataDir` and  `services.minecraft-server.<serverName>.dataDir` conflict."
             + " Set one to use a different data directory.";
         }
         {
@@ -719,7 +727,7 @@ in
         };
 
       systemd.tmpfiles.rules = mapAttrsToList (
-        name: _: "d '${cfg.dataDir}/${name}' 0770 ${cfg.user} ${cfg.group} - -"
+        name: config: "d '${config.dataDir}/${name}' 0770 ${cfg.user} ${cfg.group} - -"
       ) servers;
 
       systemd.sockets = pipe servers [
@@ -960,7 +968,7 @@ in
               TimeoutStopSec = "1min 15s";
 
               Restart = conf.restart;
-              WorkingDirectory = "${cfg.dataDir}/${name}";
+              WorkingDirectory = "${conf.dataDir}/${name}";
               User = cfg.user;
               Group = cfg.group;
               EnvironmentFile = mkIf (cfg.environmentFile != null) (toString cfg.environmentFile);
