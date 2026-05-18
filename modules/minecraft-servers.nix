@@ -727,7 +727,7 @@ in
         };
 
       systemd.tmpfiles.rules = mapAttrsToList (
-        name: config: "d '${config.dataDir}/${name}' 0770 ${cfg.user} ${cfg.group} - -"
+        name: config: "q '${config.dataDir}/${name}' 0770 ${cfg.user} ${cfg.group} - -"
       ) servers;
 
       systemd.sockets = pipe servers [
